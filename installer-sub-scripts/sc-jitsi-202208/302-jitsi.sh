@@ -198,7 +198,18 @@ APP_SECRET="$(openssl rand -hex 20)"
 
 lxc-attach -n $MACH -- zsh <<EOS
 set -e
+apt-get remove -y nginx nginx-common
+apt purge -y nginx
+apt-get autoremove -y
+wget -T 30 -qO /tmp/nginx_signing.key https://nginx.org/keys/nginx_signing.key
+cat /tmp/nginx_signing.key | gpg --dearmor >/usr/share/keyrings/nginx-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/debian `lsb_release -cs` nginx" | tee /etc/apt/sources.list.d/nginx.list
+echo -e "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" | tee /etc/apt/preferences.d/99nginx
+
+apt-get update
 export DEBIAN_FRONTEND=noninteractive
+apt-get $APT_PROXY -y install nginx
 apt-get $APT_PROXY -y install luarocks liblua5.2-dev
 apt-get $APT_PROXY -y install gcc git
 EOS
